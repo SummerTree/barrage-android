@@ -1,0 +1,62 @@
+apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+apply plugin: 'kotlin-kapt'
+
+android {
+    compileSdkVersion "${compile_sdk_version}" as Integer
+    buildToolsVersion "${build_tools_version}"
+
+    defaultConfig {
+        minSdkVersion "${min_sdk_version}" as Integer
+        targetSdkVersion "${target_sdk_version}" as Integer
+        versionCode Integer.valueOf(System.env.BUILD_NUMBER ?: "1")
+        versionName "${version}"
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    buildTypes {
+        debug {
+            minifyEnabled false
+            buildConfigField 'boolean', 'IS_DEBUG', 'true'
+        }
+        release {
+            minifyEnabled false
+            buildConfigField 'boolean', 'IS_DEBUG', 'false'
+        }
+    }
+
+    sourceSets {
+        main {
+            java.srcDirs = ['src/main/java']
+            res.srcDirs = ['src/main/res']
+            jniLibs.srcDirs = ['libs']
+        }
+
+        androidTest.setRoot('tests')
+    }
+    lintOptions {
+        abortOnError false
+    }
+}
+
+dependencies {
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+    implementation 'androidx.appcompat:appcompat:1.0.2'
+    implementation 'androidx.core:core-ktx:1.0.2'
+    testImplementation 'junit:junit:4.12'
+    androidTestImplementation 'androidx.test:runner:1.1.1'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.1.1'
+    implementation 'com.google.code.gson:gson:2.2.4'
+}
+
+ext {
+    publish_type = 'lib'
+    publish_groupId = 'tv.athena'
+    publish_artifactId = 'lpf-barrage'
+}
+apply from: '../publish.gradle'
+

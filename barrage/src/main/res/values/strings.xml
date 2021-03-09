@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">barrage</string>
+
+    <!-- channelpage - barrage -->
+    <string name="barrage_chinese">中</string>
+    <string name="barrage_english">E</string>
+
+</resources>
