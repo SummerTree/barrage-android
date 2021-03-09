@@ -1,0 +1,78 @@
+apply plugin: 'maven-publish'
+
+private def getSdkReleaseVersion(adb) {
+    def output = new ByteArrayOutputStream()
+    exec {
+        standardOutput = output
+        commandLine("$adb", "shell", "getprop", "ro.build.version.release")
+        ignoreExitValue true
+    }
+    def version = output.toString().trim()
+    println "getSdkReleaseVersion:${version}"
+    return version
+}
+
+private def getSdkVersion(adb) {
+    def output = new ByteArrayOutputStream()
+    exec {
+        standardOutput = output
+        commandLine("$adb", "shell", "getprop", "ro.build.version.sdk")
+        ignoreExitValue true
+    }
+    def version = output.toString().trim()
+    println "getSdkReleaseVersion:${version}"
+    if (null == version || version == "") {
+        return 0
+    } else {
+        return version as Integer
+    }
+}
+
+def androidLib = project.hasProperty("android")
+apply from: androidLib
+        ? "../publish_lib.gradle"
+        : "../publish_java.gradle"
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId publish_groupId
+            artifactId publish_artifactId
+            // Tell maven to prepare the generated "*.aar" file for publishing
+            artifact(androidLib ? "$buildDir/outputs/aar/${project.getName()}-release.aar" : "$buildDir/libs/${project.getName()}-${version}.jar")
+            artifact androidSourcesJar
+
+            pom.withXml {
+                //Creating additional node for dependencies
+                def dependenciesNode = asNode().appendNode('dependencies')
+
+                //Defining configuration names from which dependencies will be taken (debugCompile or releaseCompile and compile)
+                def configurationNames = ["releaseCompile", 'compile', 'api', "implementation"]
+                configurationNames.each { configurationName ->
+                    if (!configurations.names.contains(configurationName)) {
+                        return
+                    }
+                    configurations[configurationName].allDependencies.each {
+                        if (it.group != null && it.name != null) {
+                            def dependencyNode = dependenciesNode.appendNode('dependency')
+                            dependencyNode.appendNode('groupId', it.group)
+                            dependencyNode.appendNode('artifactId', it.name)
+                            dependencyNode.appendNode('version', it.version)
+
+                            //If there are any exclusions in dependency
+                            if (it.excludeRules.size() > 0) {
+                                def exclusionsNode = dependencyNode.appendNode('exclusions')
+                                it.excludeRules.each { rule ->
+                                    def exclusionNode = exclusionsNode.appendNode('exclusion')
+                                    exclusionNode.appendNode('groupId', rule.group)
+                                    exclusionNode.appendNode('artifactId', rule.module)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+publish.dependsOn androidLib ? "assembleRelease" : "build"
+publishToMavenLocal.dependsOn androidLib ? "assembleRelease" : "build"
